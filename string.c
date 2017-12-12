@@ -38,7 +38,7 @@ int
 i
 ;
 char
-*
+*  bakchodi
 s
 []
 =
