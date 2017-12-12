@@ -38,7 +38,7 @@ int
 i
 ;
 char
-*  bakchodi
+* 
 s
 []
 =
@@ -76,7 +76,7 @@ s
 [
 i
 ]));
-return
+return // return is performed here
 0
 ;
 }
