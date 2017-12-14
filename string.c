@@ -76,7 +76,7 @@ s
 [
 i
 ]));
-return // return is performed here is 
+return // return is performed here
 0
 ;
 }
