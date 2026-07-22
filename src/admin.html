@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="sobha-page" content="admin">
+  <title>Sobha Admin — Data Upload</title>
+  <style>
+    :root {
+      --bg: #f8f6f1;
+      --panel: #ffffff;
+      --border: #e8e3d7;
+      --text: #1a1814;
+      --muted: #8a8170;
+      --gold: #b08a4e;
+      --gold-bg: #f5ecd9;
+      --black: #0d0c0a;
+      --good: #2d7a4f;
+      --bad: #b53a3a;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Calibri, "Trebuchet MS", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 24px;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    h1 { margin: 0 0 6px; font-family: Georgia, serif; letter-spacing: 1px; }
+    .sub { color: var(--muted); margin-bottom: 24px; }
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 16px;
+      box-shadow: 0 1px 2px rgba(20,16,8,0.04);
+    }
+    label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: .6px; }
+    input[type=text], input[type=password] {
+      width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px;
+    }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+    button {
+      background: var(--black); color: #fff; border: none; border-radius: 8px;
+      padding: 10px 16px; font-size: 14px; cursor: pointer;
+    }
+    button.secondary { background: #fff; color: var(--text); border: 1px solid var(--border); }
+    button:disabled { opacity: .6; cursor: not-allowed; }
+    .drop {
+      border: 2px dashed var(--border); border-radius: 10px; padding: 28px; text-align: center;
+      background: var(--gold-bg); color: var(--muted); margin-top: 8px;
+    }
+    .drop.dragover { border-color: var(--gold); background: #fff; }
+    .status { margin-top: 12px; font-size: 13px; }
+    .ok { color: var(--good); }
+    .err { color: var(--bad); white-space: pre-wrap; }
+    .topbar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    a { color: var(--gold); text-decoration: none; }
+    .hidden { display: none; }
+    .meta-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .meta-item { background: var(--gold-bg); border-radius: 8px; padding: 12px; }
+    .meta-item strong { display: block; font-size: 18px; margin-top: 4px; }
+    .btn-sso {
+      width: 100%; margin-top: 8px; padding: 14px; background: #f3f6fb; color: #1a1814;
+      border: 1px solid #d4cdb8; border-radius: 8px; font-weight: 700; font-size: 13px;
+      cursor: pointer; letter-spacing: 1px; text-transform: uppercase; font-family: inherit;
+      transition: all 0.2s;
+    }
+    .btn-sso:hover { border-color: #b08a4e; background: #fff; }
+    .btn-sso:disabled { opacity: 0.7; cursor: not-allowed; }
+    #loginErr.show, #loginErr:not(:empty) { display: block; }
+    #loginErr:empty { display: none; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="topbar">
+      <div>
+        <h1>SOBHA ADMIN</h1>
+        <div class="sub">Upload SBTR and Sales Team Mapping files</div>
+      </div>
+      <a href="/">← Dashboard</a>
+    </div>
+
+    <div class="card" id="loginCard">
+      <p class="sub" style="margin-top:0;margin-bottom:16px;">Sign in with your Microsoft account to manage uploads.</p>
+      <button type="button" id="microsoftSSOBtn" class="btn-sso" data-microsoft-sso="1">
+        Sign in with Microsoft
+      </button>
+      <div class="status err" id="loginErr"></div>
+    </div>
+
+    <div id="adminPanel" class="hidden">
+      <div class="card">
+        <h3 style="margin-top:0">Current Dataset</h3>
+        <div class="meta-grid" id="metaGrid"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Upload SBTR</h3>
+        <p class="sub" style="margin-top:0">Replaces all booking data in the dashboard.</p>
+        <input type="file" id="sbtrFile" accept=".xlsx,.xlsm" hidden>
+        <div class="drop" id="sbtrDrop">Drop SBTR .xlsx here or <button type="button" class="secondary" id="sbtrBrowse">Browse</button></div>
+        <div class="status" id="sbtrStatus"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Upload Sales Team Mapping</h3>
+        <p class="sub" style="margin-top:0">Replaces the org hierarchy used for scoping and leaderboards.</p>
+        <p class="sub" style="margin-top:0">Required columns: <strong>Name of Employee</strong>, <strong>Sales Head</strong>, <strong>VP</strong>, <strong>CSO</strong>, <strong>Team</strong>. Optional: <strong>Designation</strong>.</p>
+        <input type="file" id="mapFile" accept=".xlsx,.xlsm" hidden>
+        <div class="drop" id="mapDrop">Drop team mapping .xlsx here or <button type="button" class="secondary" id="mapBrowse">Browse</button></div>
+        <div class="status" id="mapStatus"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Upload Dashboard Users</h3>
+        <p class="sub" style="margin-top:0">Upload one Excel file with usernames and PINs together. Replaces old PIN users; built-in <code>admin</code> and <code>viewer</code> accounts are kept.</p>
+        <p class="sub" style="margin-top:0">Required columns: <strong>Username</strong>, <strong>PIN</strong>, <strong>Name</strong>, <strong>Role</strong>, <strong>Scope Type</strong>, <strong>Scope Value</strong>. Optional: <strong>Email</strong>.</p>
+        <input type="file" id="usersFile" accept=".xlsx,.xlsm" hidden>
+        <div class="drop" id="usersDrop">Drop users .xlsx here or <button type="button" class="secondary" id="usersBrowse">Browse</button></div>
+        <div class="status" id="usersStatus"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">User Management</h3>
+        <p class="sub" style="margin-top:0">Add a single user manually, or use the Excel upload above for bulk import.</p>
+        <div class="row">
+          <div>
+            <label>Username</label>
+            <input type="text" id="newUserUsername" autocomplete="off">
+          </div>
+          <div>
+            <label>Password</label>
+            <input type="password" id="newUserPassword" autocomplete="new-password">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Name</label>
+            <input type="text" id="newUserName" autocomplete="off">
+          </div>
+          <div>
+            <label>Email</label>
+            <input type="text" id="newUserEmail" autocomplete="off">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Role</label>
+            <input type="text" id="newUserRole" value="SM" autocomplete="off">
+          </div>
+          <div>
+            <label>Scope Type</label>
+            <input type="text" id="newUserScopeType" value="sm" autocomplete="off">
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label>Scope Value</label>
+            <input type="text" id="newUserScopeValue" value="" autocomplete="off">
+          </div>
+          <div style="align-self:flex-end;">
+            <button type="button" id="createUserBtn">Create User</button>
+          </div>
+        </div>
+        <div class="status" id="userStatus"></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Existing Users</h3>
+        <p class="sub" style="margin-top:0">Delete users that should no longer access the dashboard.</p>
+        <div id="userList"></div>
+      </div>
+
+      <button type="button" class="secondary" id="logoutBtn">Logout</button>
+    </div>
+  </div>
+
+  <script>
+    window.SOBHA_ADMIN_MODE = true;
+    window.SOBHA_API_BASE = '/admin';
+  </script>
+  <script src="/js/api.js?v=4"></script>
+  <script src="/js/auto-refresh.js"></script>
+  <script src="/js/admin-sso.js"></script>
+  <script>
+    const loginCard = document.getElementById('loginCard');
+    const adminPanel = document.getElementById('adminPanel');
+    const loginErr = document.getElementById('loginErr');
+
+    (function showLoginErrorFromRedirect() {
+      const params = new URLSearchParams(window.location.search);
+      const err = params.get('login_error');
+      if (!err) return;
+      loginErr.textContent = err;
+      history.replaceState({}, '', '/admin');
+    })();
+
+    function showPanel() {
+      loginCard.classList.add('hidden');
+      adminPanel.classList.remove('hidden');
+      refreshStatus();
+    }
+
+    async function refreshStatus() {
+      try {
+        const s = await API.adminStatus();
+        document.getElementById('metaGrid').innerHTML = `
+          <div class="meta-item"><span>SBTR as of</span><strong>${s.sbtr_as_of || '—'}</strong></div>
+          <div class="meta-item"><span>Booking rows</span><strong>${(s.row_count || 0).toLocaleString()}</strong></div>
+          <div class="meta-item"><span>Team mapping</span><strong>${(s.team_mapping_rows || 0).toLocaleString()}</strong></div>
+          <div class="meta-item"><span>Dashboard users</span><strong>${(s.user_count || 0).toLocaleString()}</strong></div>`;
+      } catch (e) {
+        document.getElementById('metaGrid').innerHTML = `<div class="err">${e.message}</div>`;
+      }
+    }
+
+    document.getElementById('logoutBtn').onclick = () => {
+      ['sobha_token', 'sobha_user_v5', 'sobha_user', 'sobha_identity'].forEach((key) => {
+        sessionStorage.removeItem(key);
+      });
+      if (typeof window.sobhaClearAutoRefreshSession === 'function') {
+        window.sobhaClearAutoRefreshSession();
+      }
+      adminPanel.classList.add('hidden');
+      loginCard.classList.remove('hidden');
+      loginErr.textContent = '';
+    };
+
+    function wireDrop(dropId, inputId, browseId, statusId, endpoint, onSuccess) {
+      const drop = document.getElementById(dropId);
+      const input = document.getElementById(inputId);
+      const status = document.getElementById(statusId);
+      document.getElementById(browseId).onclick = () => input.click();
+      ['dragenter','dragover'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add('dragover'); }));
+      ['dragleave','drop'].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove('dragover'); }));
+      drop.addEventListener('drop', e => upload(e.dataTransfer.files[0]));
+      input.addEventListener('change', () => upload(input.files[0]));
+
+      async function upload(file) {
+        if (!file) return;
+        status.className = 'status';
+        status.textContent = 'Uploading…';
+        try {
+          const res = await API.uploadAdmin(endpoint, file);
+          status.className = 'status ok';
+          if (endpoint.includes('sbtr')) {
+            status.textContent = `✓ Loaded ${res.count.toLocaleString()} rows · SBTR as of ${res.as_of}`;
+          } else if (endpoint.includes('users')) {
+            status.textContent = `✓ Synced ${res.count.toLocaleString()} users (${res.created} new, ${res.updated} updated, ${res.removed} removed)`;
+          } else {
+            status.textContent = `✓ Loaded ${res.count.toLocaleString()} rows from ${res.file_name}`;
+          }
+          refreshStatus();
+          if (typeof onSuccess === 'function') await onSuccess();
+          if (endpoint.includes('sbtr') || endpoint.includes('team-mapping')) {
+            try {
+              const meta = await API.adminStatus();
+              const rev = [meta.updated_at || '', meta.sbtr_as_of || '', String(meta.row_count || 0)].join('|');
+              localStorage.setItem('sobha_data_revision', rev);
+              if (typeof BroadcastChannel !== 'undefined') {
+                new BroadcastChannel('sobha_dataset').postMessage({ type: 'dataset-updated', revision: rev });
+              }
+            } catch (_) {}
+          }
+        } catch (e) {
+          status.className = 'status err';
+          status.textContent = e.message;
+        } finally {
+          input.value = '';
+        }
+      }
+    }
+
+    async function refreshUsers() {
+      try {
+        const res = await API.getUsers();
+        const list = document.getElementById('userList');
+        if (!res.users.length) {
+          list.innerHTML = '<p>No users found.</p>';
+          return;
+        }
+        list.innerHTML = `
+          <table style="width:100%; border-collapse: collapse;">
+            <thead>
+              <tr>
+                <th style="text-align:left; padding: 6px; border-bottom: 1px solid var(--border);">Username</th>
+                <th style="text-align:left; padding: 6px; border-bottom: 1px solid var(--border);">Name</th>
+                <th style="text-align:left; padding: 6px; border-bottom: 1px solid var(--border);">Role</th>
+                <th style="text-align:left; padding: 6px; border-bottom: 1px solid var(--border);">Scope</th>
+                <th style="text-align:left; padding: 6px; border-bottom: 1px solid var(--border);">Email</th>
+                <th style="text-align:left; padding: 6px; border-bottom: 1px solid var(--border);">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${res.users.map(u => `
+                <tr>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border);">${u.username}</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border);">${u.name}</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border);">${u.role}</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border);">${u.scope_type}:${u.scope_value}</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border);">${u.email || ''}</td>
+                  <td style="padding: 8px; border-bottom: 1px solid var(--border);">
+                    <button type="button" data-user="${u.username}" class="delete-user">Delete</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        `;
+        list.querySelectorAll('.delete-user').forEach(btn => {
+          btn.onclick = async () => {
+            const username = btn.dataset.user;
+            if (!confirm(`Delete user ${username}?`)) return;
+            try {
+              await API.deleteUser(username);
+              await refreshUsers();
+            } catch (e) {
+              document.getElementById('userStatus').className = 'status err';
+              document.getElementById('userStatus').textContent = e.message;
+            }
+          };
+        });
+      } catch (e) {
+        document.getElementById('userList').innerHTML = `<div class="err">${e.message}</div>`;
+      }
+    }
+
+    document.getElementById('createUserBtn').onclick = async () => {
+      const payload = {
+        username: document.getElementById('newUserUsername').value.trim().toLowerCase(),
+        password: document.getElementById('newUserPassword').value,
+        name: document.getElementById('newUserName').value.trim(),
+        email: document.getElementById('newUserEmail').value.trim(),
+        role: document.getElementById('newUserRole').value.trim(),
+        scope_type: document.getElementById('newUserScopeType').value.trim(),
+        scope_value: document.getElementById('newUserScopeValue').value.trim(),
+      };
+      const status = document.getElementById('userStatus');
+      status.className = 'status';
+      status.textContent = 'Creating user…';
+      try {
+        await API.createUser(payload);
+        status.className = 'status ok';
+        status.textContent = `Created ${payload.username}`;
+        document.getElementById('newUserUsername').value = '';
+        document.getElementById('newUserPassword').value = '';
+        document.getElementById('newUserName').value = '';
+        document.getElementById('newUserEmail').value = '';
+        await refreshUsers();
+      } catch (e) {
+        status.className = 'status err';
+        status.textContent = e.message;
+      }
+    };
+
+    if (sessionStorage.getItem('sobha_token')) {
+      API.adminStatus().then(showPanel).then(refreshUsers).catch(() => {});
+    }
+
+    wireDrop('sbtrDrop', 'sbtrFile', 'sbtrBrowse', 'sbtrStatus', '/upload/sbtr');
+    wireDrop('mapDrop', 'mapFile', 'mapBrowse', 'mapStatus', '/upload/team-mapping');
+    wireDrop('usersDrop', 'usersFile', 'usersBrowse', 'usersStatus', '/upload/users', refreshUsers);
+  </script>
+</body>
+</html>
